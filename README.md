@@ -1,6 +1,9 @@
 # Regex Parser
 
-A simple but powerful Parser implementation using Java Regexs.
+A simple but powerful Parser implementation written in Java.
+
+Uses Java Regexs, combined with Lambdas and a pinch of Generics,
+to allow for easy definitions of grammars.
 
 ## Example usage
 
