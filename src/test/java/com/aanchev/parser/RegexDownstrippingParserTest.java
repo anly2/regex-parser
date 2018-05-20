@@ -34,4 +34,30 @@ public class RegexDownstrippingParserTest {
         assertThat(parser.parse(" B"), is("type b"));
         assertThat(parser.parse(" C "), is("type c"));
     }
+
+    @Test
+    public void parse_canMap_dynamic() {
+        Parser parser = new RegexDownstrippingParser<String>(asList(
+                rule("\\d+", (matcher, children) -> "int " + matcher.group()),
+                rule("\\+\\d+", (matcher, children) -> "positive " + matcher.group().substring(1)),
+                rule("\\-\\d+", (matcher, children) -> "negative " + matcher.group().substring(1))
+        ));
+
+        assertThat(parser.parse("123"), is("int 123"));
+        assertThat(parser.parse("+456"), is("positive 456"));
+        assertThat(parser.parse("-789"), is("negative 789"));
+    }
+
+    @Test
+    public void parse_canMap_nested() {
+        Parser parser = new RegexDownstrippingParser<String>(asList(
+                rule("\\d+", (matcher, children) -> "int " + matcher.group()),
+                rule("\\+(.*)", (matcher, children) -> "positive " + children.get(0)),
+                rule("\\-(.*)", (matcher, children) -> "negative " + children.get(0))
+        ));
+
+        assertThat(parser.parse("123"), is("int 123"));
+        assertThat(parser.parse("+456"), is("positive int 456"));
+        assertThat(parser.parse("-789"), is("negative int 789"));
+    }
 }
