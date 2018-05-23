@@ -115,14 +115,14 @@ public class GroupRule<O> implements Rule<O> {
         List<Pair<Integer, Integer>> groups = new LinkedList<>();
 
         int o = itOpenings.next();
-        int c = itClosings.next();
 
         do {
+            int c = itClosings.next();
+
             final int groupStart = o;
             final int threshold = c;
 
-            while (o <= threshold && itOpenings.hasNext()) {
-                o = itOpenings.next();
+            while (itOpenings.hasNext() && (o = itOpenings.next()) <= threshold) {
                 c = itClosings.next();
             }
 
