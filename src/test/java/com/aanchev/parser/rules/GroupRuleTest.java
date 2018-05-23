@@ -13,10 +13,14 @@
 
 package com.aanchev.parser.rules;
 
+import javafx.util.Pair;
 import org.junit.Test;
 
+import java.util.List;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import static com.aanchev.parser.rules.GroupRule.findTopLevelGroups;
 import static com.aanchev.parser.rules.GroupRule.groupRule;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
@@ -57,5 +61,22 @@ public class GroupRuleTest {
 
     @Test
     public void groupRule_doesNotMatch_unbalancedGroups() {
+    }
+
+
+    // test just the grouping functionality //
+
+    @Test
+    public void findTopLevelGroups_works() {
+        String input = "a + (b - (c + d) - e) - (f + (g - h) + i) + j";
+        Pattern opening = Pattern.compile("\\(");
+        Pattern closing = Pattern.compile("\\)");
+
+        List<Pair<Integer, Integer>> groups = findTopLevelGroups(input, opening, closing);
+        groups.forEach(group -> {
+            int start = group.getKey();
+            int end = group.getValue();
+            System.out.format("%d-%d: %s%n", start, end, input.substring(start, end));
+        });
     }
 }

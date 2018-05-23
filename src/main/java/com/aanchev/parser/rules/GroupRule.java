@@ -13,13 +13,18 @@
 
 package com.aanchev.parser.rules;
 
+import javafx.util.Pair;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static java.util.Collections.emptyList;
 
 public class GroupRule<O> implements Rule<O> {
 
@@ -77,6 +82,55 @@ public class GroupRule<O> implements Rule<O> {
 
     protected static Pattern toStride(String opening, String closing) {
         return Pattern.compile(String.format("(?<opening>%s)|(?<closing>%s)", opening, closing));
+    }
+
+
+    /* Functionality */
+
+    public static List<Pair<Integer, Integer>> findTopLevelGroups(CharSequence input, Pattern opening, Pattern closing) {
+        List<Integer> openings = new LinkedList<>();
+        List<Integer> closings = new LinkedList<>();
+
+        Matcher openingMatcher = opening.matcher(input);
+        while (openingMatcher.find()) {
+            openings.add(openingMatcher.end());
+        }
+
+        Matcher closingMatcher = closing.matcher(input);
+        while (closingMatcher.find()) {
+            closings.add(closingMatcher.start());
+        }
+
+        return getTopLevelGroups(openings, closings);
+    }
+
+    public static List<Pair<Integer, Integer>> getTopLevelGroups(Iterable<Integer> openings, Iterable<Integer> closings) {
+        Iterator<Integer> itOpenings = openings.iterator();
+        Iterator<Integer> itClosings = closings.iterator();
+
+        if (!itOpenings.hasNext()) {
+            return emptyList();
+        }
+
+        List<Pair<Integer, Integer>> groups = new LinkedList<>();
+
+        int o = itOpenings.next();
+        int c = itClosings.next();
+
+        do {
+            final int groupStart = o;
+            final int threshold = c;
+
+            while (o <= threshold && itOpenings.hasNext()) {
+                o = itOpenings.next();
+                c = itClosings.next();
+            }
+
+            final int groupEnd = c;
+            groups.add(new Pair<>(groupStart, groupEnd));
+        } while (itOpenings.hasNext());
+
+        return groups;
     }
 
 
