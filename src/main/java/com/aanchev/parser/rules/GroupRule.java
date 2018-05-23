@@ -128,7 +128,7 @@ public class GroupRule<O> implements Rule<O> {
 
             final int groupEnd = c;
             groups.add(new Pair<>(groupStart, groupEnd));
-        } while (itOpenings.hasNext());
+        } while (itClosings.hasNext());
 
         return groups;
     }

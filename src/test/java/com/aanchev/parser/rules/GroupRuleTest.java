@@ -22,6 +22,8 @@ import java.util.regex.Pattern;
 
 import static com.aanchev.parser.rules.GroupRule.findTopLevelGroups;
 import static com.aanchev.parser.rules.GroupRule.groupRule;
+import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 
@@ -67,16 +69,72 @@ public class GroupRuleTest {
     // test just the grouping functionality //
 
     @Test
-    public void findTopLevelGroups_works() {
+    public void findTopLevelGroups_findsSingleWholeGroup() {
+        String input = "<A, B>";
+        Pattern opening = Pattern.compile("<");
+        Pattern closing = Pattern.compile(">");
+
+        List<Pair<Integer, Integer>> groups = findTopLevelGroups(input, opening, closing);
+
+        assertThat(groups, is(singletonList(
+                new Pair<>(1, 5)
+        )));
+    }
+
+    @Test
+    public void findTopLevelGroups_findsSingleSurroundedGroup() {
+        String input = "private Map<String, String> aliases;";
+        Pattern opening = Pattern.compile("<");
+        Pattern closing = Pattern.compile(">");
+
+        List<Pair<Integer, Integer>> groups = findTopLevelGroups(input, opening, closing);
+
+        assertThat(groups, is(singletonList(
+                new Pair<>(12, 26)
+        )));
+    }
+
+
+    @Test
+    public void findTopLevelGroups_findsMultipleTopLevelGroups() {
+        String input = "a[href][target]";
+        Pattern opening = Pattern.compile("\\[");
+        Pattern closing = Pattern.compile("]");
+
+        List<Pair<Integer, Integer>> groups = findTopLevelGroups(input, opening, closing);
+
+        assertThat(groups, is(asList(
+                new Pair<>(2, 6),
+                new Pair<>(8, 14)
+        )));
+    }
+
+    @Test
+    public void findTopLevelGroups_worksWithLenghtyBoundaries() {
+        String input = "Lorem <b>ipsum</b> <em>dolor</em> <span>sit amet</span>";
+        Pattern opening = Pattern.compile("<\\w++>");
+        Pattern closing = Pattern.compile("</\\w++>");
+
+        List<Pair<Integer, Integer>> groups = findTopLevelGroups(input, opening, closing);
+
+        assertThat(groups, is(asList(
+                new Pair<>(9, 14),
+                new Pair<>(23, 28),
+                new Pair<>(40, 48)
+        )));
+    }
+
+    @Test
+    public void findTopLevelGroups_skipsNestedGroups() {
         String input = "a + (b - (c + d) - e) - (f + (g - h) + i) + j";
         Pattern opening = Pattern.compile("\\(");
         Pattern closing = Pattern.compile("\\)");
 
         List<Pair<Integer, Integer>> groups = findTopLevelGroups(input, opening, closing);
-        groups.forEach(group -> {
-            int start = group.getKey();
-            int end = group.getValue();
-            System.out.format("%d-%d: %s%n", start, end, input.substring(start, end));
-        });
+
+        assertThat(groups, is(asList(
+                new Pair<>(5, 20),
+                new Pair<>(25, 40)
+        )));
     }
 }
