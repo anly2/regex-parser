@@ -23,6 +23,7 @@ import java.util.regex.Pattern;
 import static com.aanchev.parser.rules.GroupRule.findTopLevelGroups;
 import static com.aanchev.parser.rules.GroupRule.groupMatchingRule;
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
@@ -42,9 +43,9 @@ public class GroupRuleTest {
         String input = "a + (b - (c + d) - e) - (f + (g - h) + i) + j";
 
         boolean[] called = {false};
-        Rule<?> rule = groupMatchingRule("\\(", "\\)", matcher -> {
-            for (int g = 1; g <= matcher.groupCount(); g++) {
-                System.out.println(g + ": " + matcher.group(g));
+        Rule<?> rule = groupMatchingRule("\\(", "\\)", (match, children) -> {
+            for (int g = 1; g <= match.groupCount(); g++) {
+                System.out.println(g + ": " + match.group(g));
             }
             called[0] = true;
             return null;
@@ -52,7 +53,7 @@ public class GroupRuleTest {
 
         Matcher matcher = rule.pattern().matcher(input);
         if (matcher.matches()) {
-            rule.earlyHandler().apply(matcher);
+            rule.handle(matcher.toMatchResult(), emptyList());
         }
 
         assertThat(called[0], is(true));

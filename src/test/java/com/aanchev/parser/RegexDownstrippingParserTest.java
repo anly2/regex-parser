@@ -18,7 +18,7 @@ import org.junit.Test;
 import java.util.regex.Pattern;
 
 import static com.aanchev.parser.rules.RegexRule.rule;
-import static com.aanchev.parser.rules.ShallowRule.shallowRule;
+import static com.aanchev.parser.rules.ShallowRule.shallow;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
@@ -161,7 +161,7 @@ public class RegexDownstrippingParserTest {
     @Test
     public void parse_honorsEarlyHandlerVeto_expressedAsReturnedNull() {
         Parser parser = new RegexDownstrippingParser<>(asList(
-                rule(Pattern.compile(".*"), matcher -> null),
+                rule(Pattern.compile(".*"), (matcher, children) -> null),
                 rule("[A]", (matcher, children) -> "letter a")
         ));
 
@@ -172,10 +172,10 @@ public class RegexDownstrippingParserTest {
     public void parse_ignoresGroups() {
         Parser parser = new RegexDownstrippingParser<String>(asList(
                 rule("\\d+", (matcher, children) -> "int " + matcher.group()),
-                shallowRule("\\+(\\d+)", (matcher, children) -> {
+                shallow(rule("\\+(\\d+)", (matcher, children) -> {
                     assertTrue(children.isEmpty());
                     return "positive " + matcher.group(1);
-                })
+                }))
         ));
 
         assertThat(parser.parse("+1"), is("positive 1"));

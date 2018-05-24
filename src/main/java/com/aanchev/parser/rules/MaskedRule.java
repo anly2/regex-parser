@@ -13,21 +13,22 @@
 
 package com.aanchev.parser.rules;
 
+import lombok.AllArgsConstructor;
+
 import java.util.BitSet;
 import java.util.List;
-import java.util.function.BiFunction;
-import java.util.function.Function;
-import java.util.regex.Matcher;
+import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
 
-public class MaskedRule<O> extends RegexRule<O> {
+import static lombok.AccessLevel.PROTECTED;
 
+@AllArgsConstructor(access = PROTECTED)
+public class MaskedRule<O> implements Rule<O> {
+
+    private Rule<O> body;
     private BitSet ignoredGroups;
 
-    protected MaskedRule(Pattern pattern, BitSet ignoredGroups, Function<Matcher, Function<List<O>, O>> earlyHandler) {
-        super(pattern, earlyHandler);
-        this.ignoredGroups = ignoredGroups;
-    }
+    /* Decorated functionality */
 
     @Override
     public boolean shouldIgnoreGroup(int groupIndex) {
@@ -35,29 +36,45 @@ public class MaskedRule<O> extends RegexRule<O> {
     }
 
 
-    public static <O> Rule<O> maskedRule(String regex, Iterable<Integer> ignoredGroups, Function<List<O>, O> lateHandler) {
+    /* Delegation */
+
+    @Override
+    public Pattern pattern() {
+        return body.pattern();
+    }
+
+    @Override
+    public MatchResult handleMatch(MatchResult match) {
+        return body.handleMatch(match);
+    }
+
+    @Override
+    public O handle(MatchResult match, List<O> children) {
+        return body.handle(match, children);
+    }
+
+
+    /* Static initializers */
+
+    public static <O> Rule<O> masked(Rule<O> body, Iterable<Integer> ignoredGroups) {
         BitSet bitmask = new BitSet();
         for (Integer g : ignoredGroups) {
             bitmask.set(g);
         }
 
-        return maskedRule(regex, bitmask, lateHandler);
+        return masked(body, bitmask);
     }
 
-    public static <O> Rule<O> maskedRule(String regex, BitSet ignoredGroups, Function<List<O>, O> lateHandler) {
-        return new MaskedRule<>(Pattern.compile(regex), ignoredGroups, matcher -> lateHandler);
-    }
-
-    public static <O> Rule<O> maskedRule(String regex, Iterable<Integer> ignoredGroups, BiFunction<Matcher, List<O>, O> handler) {
+    public static <O> Rule<O> masked(Rule<O> body, int... ignoredGroups) {
         BitSet bitmask = new BitSet();
-        for (Integer g : ignoredGroups) {
+        for (int g : ignoredGroups) {
             bitmask.set(g);
         }
 
-        return maskedRule(regex, bitmask, handler);
+        return masked(body, bitmask);
     }
 
-    public static <O> Rule<O> maskedRule(String regex, BitSet ignoredGroups, BiFunction<Matcher, List<O>, O> handler) {
-        return new MaskedRule<>(Pattern.compile(regex), ignoredGroups, matcher -> children -> handler.apply(matcher, children));
+    public static <O> Rule<O> masked(Rule<O> body, BitSet ignoredGroups) {
+        return new MaskedRule<>(body, ignoredGroups);
     }
 }

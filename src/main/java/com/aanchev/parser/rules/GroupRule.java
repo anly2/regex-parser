@@ -14,49 +14,57 @@
 package com.aanchev.parser.rules;
 
 import javafx.util.Pair;
-import lombok.Getter;
-import lombok.experimental.Accessors;
+import lombok.AllArgsConstructor;
 
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.aanchev.parser.rules.RegexRule.rule;
 import static java.util.Collections.emptyList;
+import static lombok.AccessLevel.PROTECTED;
 
+@AllArgsConstructor(access = PROTECTED)
 public class GroupRule<O> implements Rule<O> {
 
     private static Pattern PATTERN_ANYTHING = Pattern.compile(".*+", Pattern.DOTALL);
 
-    @Getter
-    @Accessors(fluent = true)
-    private Function<Matcher, Function<List<O>, O>> earlyHandler;
+    private Rule<O> body;
     private Pattern opening;
     private Pattern closing;
-    private MatchResult currentMatch;
 
-    protected GroupRule(Pattern opening, Pattern closing, Function<Matcher, Function<List<O>, O>> earlyHandler) {
-        this.earlyHandler = prepare(earlyHandler);
-        this.opening = opening;
-        this.closing = closing;
+
+    /* Decorated Functionality */
+
+    @Override
+    public MatchResult handleMatch(MatchResult match) {
+        MatchResult groupMatch = matchTopLevelGroups(match.group(), opening, closing);
+        if (groupMatch.groupCount() == 0) {
+            return null;
+        }
+        return body.handleMatch(groupMatch);
     }
 
-    private Function<Matcher, Function<List<O>, O>> prepare(Function<Matcher, Function<List<O>, O>> earlyHandler) {
-        return match -> {
-            currentMatch = matchTopLevelGroups(match.group(), opening, closing);
-            if (currentMatch.groupCount() == 0) {
-                return null;
-            }
-            return earlyHandler.apply(match);
-        };
+
+    /* Delegation */
+
+    @Override
+    public Pattern pattern() {
+        return body.pattern();
     }
 
     @Override
-    public MatchResult handleGroups(MatchResult match) {
-        return currentMatch;
+    public boolean shouldIgnoreGroup(int groupIndex) {
+        return false;
+    }
+
+    @Override
+    public O handle(MatchResult match, List<O> children) {
+        return body.handle(match, children);
     }
 
     /* Functionality */
@@ -136,22 +144,21 @@ public class GroupRule<O> implements Rule<O> {
     }
 
 
-    /* Rule contract */
-
-    @Override
-    public Pattern pattern() {
-        return PATTERN_ANYTHING;
-    }
-
-    @Override
-    public boolean shouldIgnoreGroup(int groupIndex) {
-        return false;
-    }
-
-
     /* Static constructors */
 
-    public static <O> Rule<O> groupMatchingRule(String openingRegex, String closingRegex, Function<Matcher, Function<List<O>, O>> earlyHandler) {
-        return new GroupRule<>(Pattern.compile(openingRegex), Pattern.compile(closingRegex), earlyHandler);
+    public static <O> Rule<O> groupMatching(Rule<O> body, String openingRegex, String closingRegex) {
+        return groupMatching(body, Pattern.compile(openingRegex), Pattern.compile(closingRegex));
+    }
+
+    public static <O> Rule<O> groupMatching(Rule<O> body, Pattern opening, Pattern closing) {
+        return new GroupRule<>(body, opening, closing);
+    }
+
+    public static <O> Rule<O> groupMatchingRule(String openingRegex, String closingRegex, BiFunction<MatchResult, List<O>, O> handler) {
+        return groupMatchingRule(Pattern.compile(openingRegex), Pattern.compile(closingRegex), handler);
+    }
+
+    public static <O> Rule<O> groupMatchingRule(Pattern opening, Pattern closing, BiFunction<MatchResult, List<O>, O> handler) {
+        return new GroupRule<>(rule(PATTERN_ANYTHING, handler), opening, closing);
     }
 }
