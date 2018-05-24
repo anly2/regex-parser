@@ -21,6 +21,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Function;
+import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -33,59 +34,60 @@ public class GroupRule<O> implements Rule<O> {
     @Getter
     @Accessors(fluent = true)
     private Function<Matcher, Function<List<O>, O>> earlyHandler;
-    private Pattern stride;
+    private Pattern opening;
+    private Pattern closing;
+    private MatchResult currentMatch;
 
-    protected GroupRule(String opening, String closing, Function<Matcher, Function<List<O>, O>> earlyHandler) {
+    protected GroupRule(Pattern opening, Pattern closing, Function<Matcher, Function<List<O>, O>> earlyHandler) {
         this.earlyHandler = prepare(earlyHandler);
-        this.stride = toStride(opening, closing);
+        this.opening = opening;
+        this.closing = closing;
     }
 
     private Function<Matcher, Function<List<O>, O>> prepare(Function<Matcher, Function<List<O>, O>> earlyHandler) {
-        return matcher -> {
-            matcher = reshape(matcher);
-            if (matcher == null) {
+        return match -> {
+            currentMatch = matchTopLevelGroups(match.group(), opening, closing);
+            if (currentMatch.groupCount() == 0) {
                 return null;
             }
-            return earlyHandler.apply(matcher);
+            return earlyHandler.apply(match);
         };
     }
 
-    protected Matcher reshape(Matcher matcher) {
-        Matcher reshaper = stride.matcher(matcher.group());
-        //TODO: rename stride
-        //TODO: ignore nested groups
-        StringBuilder templateSB = new StringBuilder(matcher.group().length());
-        while (reshaper.find()) {
-            if (reshaper.start() > 0) {
-                templateSB.append(".{").append(reshaper.start()).append("}");
-            }
-
-            if (reshaper.group("opening") != null) {
-                templateSB.append(".{").append(reshaper.group("opening").length()).append("}");
-                templateSB.append("(");
-            }
-            if (reshaper.group("closing") != null) {
-                templateSB.append(")");
-                templateSB.append(".{").append(reshaper.group("closing").length()).append("}");
-            }
-        }
-        Pattern template = Pattern.compile(templateSB.toString());
-
-        //TODO: reset with new input (
-        matcher.region(matcher.regionStart(), matcher.regionEnd()); //reset
-        if (!matcher.usePattern(template).matches()) {
-            return null;
-        }
-
-        return matcher;
+    @Override
+    public MatchResult handleGroups(MatchResult match) {
+        return currentMatch;
     }
-
-    protected static Pattern toStride(String opening, String closing) {
-        return Pattern.compile(String.format("(?<opening>%s)|(?<closing>%s)", opening, closing));
-    }
-
 
     /* Functionality */
+
+    public static MatchResult matchTopLevelGroups(CharSequence input, Pattern opening, Pattern closing) {
+        return asMatchResult(input, findTopLevelGroups(input, opening, closing));
+    }
+
+    private static MatchResult asMatchResult(CharSequence input, List<Pair<Integer, Integer>> topLevelGroups) {
+        //TODO: implement better
+
+        StringBuilder template = new StringBuilder();
+        int i = 0;
+        for (Pair<Integer, Integer> group : topLevelGroups) {
+            template.append(".{")
+                    .append(group.getKey() - i)
+                    .append("}(")
+                    .append(".{")
+                    .append(group.getValue() - group.getKey())
+                    .append("})");
+            i = group.getValue();
+        }
+        template.append(".{").append(input.length() - i).append("}");
+
+        Matcher matcher = Pattern.compile(template.toString()).matcher(input);
+        if (!matcher.matches()) {
+            return null;
+        }
+        return matcher.toMatchResult();
+    }
+
 
     public static List<Pair<Integer, Integer>> findTopLevelGroups(CharSequence input, Pattern opening, Pattern closing) {
         List<Integer> openings = new LinkedList<>();
@@ -149,7 +151,7 @@ public class GroupRule<O> implements Rule<O> {
 
     /* Static constructors */
 
-    public static <O> Rule<O> groupRule(String opening, String closing, Function<Matcher, Function<List<O>, O>> earlyHandler) {
-        return new GroupRule<>(Pattern.quote(opening), Pattern.quote(closing), earlyHandler);
+    public static <O> Rule<O> groupMatchingRule(String openingRegex, String closingRegex, Function<Matcher, Function<List<O>, O>> earlyHandler) {
+        return new GroupRule<>(Pattern.compile(openingRegex), Pattern.compile(closingRegex), earlyHandler);
     }
 }

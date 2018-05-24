@@ -19,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Function;
+import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 
 import static java.util.Collections.unmodifiableList;
@@ -48,6 +49,7 @@ public class RegexDownstrippingParser<O> implements Parser {
                 continue;
             }
 
+            MatchResult match = matcher.toMatchResult();
             Function<List<O>, O> lateHandler = rule.earlyHandler().apply(matcher);
 
             if (lateHandler == null) {
@@ -59,14 +61,15 @@ public class RegexDownstrippingParser<O> implements Parser {
                 log.trace("Rule {} matched against '{}'", rule, input.subSequence(start, end));
             }
 
+            match = rule.handleGroups(match);
             LinkedList<O> children = new LinkedList<>();
-            for (int g = 1; g <= matcher.groupCount(); g++) {
+            for (int g = 1; g <= match.groupCount(); g++) {
                 if (rule.shouldIgnoreGroup(g)) {
                     continue;
                 }
 
-                int s = matcher.start(g);
-                int e = matcher.end(g);
+                int s = match.start(g);
+                int e = match.end(g);
 
                 children.add((s == -1 || e == -1) ? null : parse(input, s, e));
             }
