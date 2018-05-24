@@ -15,6 +15,7 @@ package com.aanchev.parser.rules;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.ToString;
 import lombok.experimental.Accessors;
 
 import java.util.List;
@@ -25,10 +26,12 @@ import java.util.regex.Pattern;
 
 import static lombok.AccessLevel.PROTECTED;
 
-@Getter
-@Accessors(fluent = true)
 @AllArgsConstructor(access = PROTECTED)
+@ToString(exclude = "handler")
 public class RegexRule<O> implements Rule<O> {
+
+    @Getter
+    @Accessors(fluent = true)
     private Pattern pattern;
     private BiFunction<MatchResult, List<O>, O> handler;
 
@@ -36,11 +39,6 @@ public class RegexRule<O> implements Rule<O> {
     @Override
     public O handle(MatchResult match, List<O> children) {
         return handler.apply(match, children);
-    }
-
-    @Override
-    public String toString() {
-        return "/" + pattern.pattern() + "/";
     }
 
 

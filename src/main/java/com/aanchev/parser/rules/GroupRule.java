@@ -59,7 +59,7 @@ public class GroupRule<O> implements Rule<O> {
 
     @Override
     public boolean shouldIgnoreGroup(int groupIndex) {
-        return false;
+        return body.shouldIgnoreGroup(groupIndex);
     }
 
     @Override

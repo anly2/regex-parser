@@ -15,8 +15,7 @@ package com.aanchev.parser;
 
 import org.junit.Test;
 
-import java.util.regex.Pattern;
-
+import static com.aanchev.parser.rules.EarlyRule.early;
 import static com.aanchev.parser.rules.RegexRule.rule;
 import static com.aanchev.parser.rules.ShallowRule.shallow;
 import static java.util.Arrays.asList;
@@ -161,7 +160,7 @@ public class RegexDownstrippingParserTest {
     @Test
     public void parse_honorsEarlyHandlerVeto_expressedAsReturnedNull() {
         Parser parser = new RegexDownstrippingParser<>(asList(
-                rule(Pattern.compile(".*"), (matcher, children) -> null),
+                early(rule(".*", (m, c) -> "should not match"), match -> null),
                 rule("[A]", (matcher, children) -> "letter a")
         ));
 
