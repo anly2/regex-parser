@@ -18,7 +18,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.function.Function;
 import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 
@@ -49,11 +48,10 @@ public class RegexDownstrippingParser<O> implements Parser {
                 continue;
             }
 
-            MatchResult match = matcher.toMatchResult();
-            Function<List<O>, O> lateHandler = rule.earlyHandler().apply(matcher);
+            MatchResult match = rule.handleMatch(matcher.toMatchResult());
 
-            if (lateHandler == null) {
-                //the early handler indicated this rule should not match
+            if (match == null) {
+                //the early match handler indicated this rule should be skipped
                 continue;
             }
 
@@ -61,7 +59,6 @@ public class RegexDownstrippingParser<O> implements Parser {
                 log.trace("Rule {} matched against '{}'", rule, input.subSequence(start, end));
             }
 
-            match = rule.handleGroups(match);
             LinkedList<O> children = new LinkedList<>();
             for (int g = 1; g <= match.groupCount(); g++) {
                 if (rule.shouldIgnoreGroup(g)) {
@@ -74,7 +71,7 @@ public class RegexDownstrippingParser<O> implements Parser {
                 children.add((s == -1 || e == -1) ? null : parse(input, s, e));
             }
 
-            return lateHandler.apply(children);
+            return rule.handle(match, children);
         }
 
         throw new ParseException("Unable to parse a section. " +

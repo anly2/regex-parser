@@ -14,20 +14,20 @@
 package com.aanchev.parser.rules;
 
 import java.util.List;
-import java.util.function.Function;
 import java.util.regex.MatchResult;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public interface Rule<O> {
     Pattern pattern();
 
-    Function<Matcher, Function<List<O>, O>> earlyHandler();
-
-    boolean shouldIgnoreGroup(int groupIndex);
-
-    default MatchResult handleGroups(MatchResult match) {
+    default MatchResult handleMatch(MatchResult match) {
         return match;
     }
+
+    default boolean shouldIgnoreGroup(int groupIndex) {
+        return false;
+    }
+
+    O handle(MatchResult match, List<O> children);
 }
 
