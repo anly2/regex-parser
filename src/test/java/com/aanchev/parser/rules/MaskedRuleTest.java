@@ -15,27 +15,29 @@ package com.aanchev.parser.rules;
 
 import org.junit.Test;
 
-import java.util.LinkedList;
 import java.util.List;
+import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.aanchev.parser.rules.MaskedRule.maskedRule;
+import static com.aanchev.parser.rules.MaskedRule.masked;
+import static com.aanchev.parser.rules.RegexRule.rule;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singleton;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertSame;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 public class MaskedRuleTest {
 
     @Test
-    public void maskedRule_canBeCreated_withLateHandler() {
+    public void masked_canDecorateRule_varargsIgnoredGroups() {
         boolean[] called = {false};
-        Rule<Boolean> sut = maskedRule("test pattern", singleton(1), children -> called[0] = true);
+        Rule<Boolean> sut = masked(rule("test pattern", children -> called[0] = true), 1);
 
         Matcher m = sut.pattern().matcher("");
-        sut.earlyHandler().apply(m).apply(emptyList());
+        sut.handle(m.toMatchResult(), emptyList());
 
         assertThat(called[0], is(true));
         assertThat(sut.shouldIgnoreGroup(0), is(false));
@@ -44,25 +46,34 @@ public class MaskedRuleTest {
     }
 
     @Test
-    public void maskedRule_canBeCreated_withFullHandler() {
-        Matcher matcher = Pattern.compile("").matcher("");
-        List<Boolean> children = new LinkedList<>();
-
+    public void masked_canDecorateRule_iterableIgnoredGroups() {
         boolean[] called = {false};
+        Rule<Boolean> sut = masked(rule("test pattern", children -> called[0] = true), singleton(1));
 
-        Rule<Boolean> sut = maskedRule("test pattern", singleton(1), (m, c) -> {
-            assertSame(m, matcher);
-            assertSame(c, children);
-            called[0] = true;
-            return true;
-        });
-
-        Boolean result = sut.earlyHandler().apply(matcher).apply(children);
+        Matcher m = sut.pattern().matcher("");
+        sut.handle(m.toMatchResult(), emptyList());
 
         assertThat(called[0], is(true));
-        assertThat(result, is(true));
         assertThat(sut.shouldIgnoreGroup(0), is(false));
         assertThat(sut.shouldIgnoreGroup(1), is(true));
         assertThat(sut.shouldIgnoreGroup(2), is(false));
+    }
+
+    @Test
+    public void masked_delegatesToDecorated() {
+        @SuppressWarnings("unchecked")
+        Rule<Object> body = mock(Rule.class);
+        Rule<Object> masked = masked(body, 1);
+
+        MatchResult match = Pattern.compile(".*+").matcher("").toMatchResult();
+        List<Object> children = emptyList();
+
+        masked.pattern();
+        masked.handleMatch(match);
+        masked.handle(match, children);
+
+        verify(body).pattern();
+        verify(body).handleMatch(match);
+        verify(body).handle(match, children);
     }
 }

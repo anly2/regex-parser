@@ -17,7 +17,8 @@ import org.junit.Test;
 
 import java.util.regex.Matcher;
 
-import static com.aanchev.parser.rules.ShallowRule.shallowRule;
+import static com.aanchev.parser.rules.RegexRule.rule;
+import static com.aanchev.parser.rules.ShallowRule.shallow;
 import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
@@ -27,10 +28,10 @@ public class ShallowRuleTest {
     @Test
     public void shallowRule_canBeCreated_withLateHandler() {
         boolean[] called = {false};
-        Rule<Boolean> sut = shallowRule("test pattern", children -> called[0] = true);
+        Rule<Boolean> sut = shallow(rule("test pattern", (match, children) -> called[0] = true));
 
         Matcher m = sut.pattern().matcher("");
-        sut.earlyHandler().apply(m).apply(emptyList());
+        sut.handle(m.toMatchResult(), emptyList());
 
         assertThat(called[0], is(true));
         assertThat(sut.shouldIgnoreGroup(0), is(true));

@@ -13,33 +13,47 @@
 
 package com.aanchev.parser.rules;
 
+import lombok.AllArgsConstructor;
+
 import java.util.List;
-import java.util.function.BiFunction;
-import java.util.function.Function;
-import java.util.regex.Matcher;
+import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
 
-public class ShallowRule<O> extends RegexRule<O> {
+import static lombok.AccessLevel.PROTECTED;
 
-    protected ShallowRule(Pattern pattern, Function<Matcher, Function<List<O>, O>> earlyHandler) {
-        super(pattern, earlyHandler);
-    }
+@AllArgsConstructor(access = PROTECTED)
+public class ShallowRule<O> implements Rule<O> {
+
+    private Rule<O> body;
+
+    /* Decorated functionality */
 
     @Override
     public boolean shouldIgnoreGroup(int groupIndex) {
         return true;
     }
 
+    /* Delegation */
 
-    public static <O> Rule<O> shallowRule(String regex, Function<List<O>, O> lateHandler) {
-        return shallowRule(Pattern.compile(regex), matcher -> lateHandler);
+    @Override
+    public Pattern pattern() {
+        return body.pattern();
     }
 
-    public static <O> Rule<O> shallowRule(String regex, BiFunction<Matcher, List<O>, O> handler) {
-        return shallowRule(Pattern.compile(regex), matcher -> children -> handler.apply(matcher, children));
+    @Override
+    public MatchResult handleMatch(MatchResult match) {
+        return body.handleMatch(match);
     }
 
-    public static <O> Rule<O> shallowRule(Pattern pattern, Function<Matcher, Function<List<O>, O>> earlyHandler) {
-        return new ShallowRule<>(pattern, earlyHandler);
+    @Override
+    public O handle(MatchResult match, List<O> children) {
+        return body.handle(match, children);
+    }
+
+
+    /* Static initializers */
+
+    public static <O> Rule<O> shallow(Rule<O> body) {
+        return new ShallowRule<>(body);
     }
 }

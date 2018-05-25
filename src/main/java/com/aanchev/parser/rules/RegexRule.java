@@ -15,43 +15,48 @@ package com.aanchev.parser.rules;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.ToString;
 import lombok.experimental.Accessors;
 
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.regex.Matcher;
+import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
 
 import static lombok.AccessLevel.PROTECTED;
 
-@Getter
-@Accessors(fluent = true)
 @AllArgsConstructor(access = PROTECTED)
+@ToString(exclude = "handler")
 public class RegexRule<O> implements Rule<O> {
+
+    @Getter
+    @Accessors(fluent = true)
     private Pattern pattern;
-    private Function<Matcher, Function<List<O>, O>> earlyHandler;
+    private BiFunction<MatchResult, List<O>, O> handler;
+
 
     @Override
-    public boolean shouldIgnoreGroup(int groupIndex) {
-        return false;
-    }
-
-    @Override
-    public String toString() {
-        return "/" + pattern.pattern() + "/";
+    public O handle(MatchResult match, List<O> children) {
+        return handler.apply(match, children);
     }
 
 
-    public static <O> Rule<O> rule(String regex, Function<List<O>, O> lateHandler) {
-        return rule(Pattern.compile(regex), matcher -> lateHandler);
+    /* Static initializers */
+
+    public static <O> Rule<O> rule(String regex, BiFunction<MatchResult, List<O>, O> handler) {
+        return rule(Pattern.compile(regex), handler);
     }
 
-    public static <O> Rule<O> rule(String regex, BiFunction<Matcher, List<O>, O> handler) {
-        return rule(Pattern.compile(regex), matcher -> children -> handler.apply(matcher, children));
+    public static <O> Rule<O> rule(Pattern pattern, BiFunction<MatchResult, List<O>, O> handler) {
+        return new RegexRule<>(pattern, handler);
     }
 
-    public static <O> Rule<O> rule(Pattern pattern, Function<Matcher, Function<List<O>, O>> earlyHandler) {
-        return new RegexRule<>(pattern, earlyHandler);
+    public static <O> Rule<O> rule(String regex, Function<List<O>, O> handler) {
+        return rule(Pattern.compile(regex), handler);
+    }
+
+    public static <O> Rule<O> rule(Pattern pattern, Function<List<O>, O> handler) {
+        return new RegexRule<>(pattern, (match, childer) -> handler.apply(childer));
     }
 }
