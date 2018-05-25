@@ -31,8 +31,8 @@ import static org.mockito.Mockito.*;
 public class EarlyRuleTest {
 
     @Test
-    @SuppressWarnings("unchecked")
     public void early_delegatesToDecorated() {
+        @SuppressWarnings("unchecked")
         Rule<Object> body = mock(Rule.class);
         Rule<Object> early = early(body, m -> m);
 
