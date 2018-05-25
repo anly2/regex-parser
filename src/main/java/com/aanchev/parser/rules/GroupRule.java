@@ -39,19 +39,6 @@ public class GroupRule<O> implements Rule<O> {
     private Pattern closing;
 
 
-    /* Decorated Functionality */
-
-    @Override
-    public MatchResult handleMatch(MatchResult match) {
-        try {
-            MatchResult groupMatch = matchTopLevelGroups(match.group(), opening, closing);
-            return body.handleMatch(groupMatch);
-        } catch (ParseException e) {
-            return null;
-        }
-    }
-
-
     /* Delegation */
 
     @Override
@@ -69,33 +56,24 @@ public class GroupRule<O> implements Rule<O> {
         return body.handle(match, children);
     }
 
+
+    /* Decorated Functionality */
+
+    @Override
+    public MatchResult handleMatch(MatchResult match) {
+        try {
+            MatchResult groupMatch = matchTopLevelGroups(match.group(), opening, closing);
+            return body.handleMatch(groupMatch);
+        } catch (ParseException e) {
+            return null;
+        }
+    }
+
+
     /* Functionality */
 
     public static MatchResult matchTopLevelGroups(CharSequence input, Pattern opening, Pattern closing) {
         return asMatchResult(input, findTopLevelGroups(input, opening, closing));
-    }
-
-    private static MatchResult asMatchResult(CharSequence input, List<Pair<Integer, Integer>> topLevelGroups) {
-        //TODO: implement better
-
-        StringBuilder template = new StringBuilder();
-        int i = 0;
-        for (Pair<Integer, Integer> group : topLevelGroups) {
-            template.append(".{")
-                    .append(group.getKey() - i)
-                    .append("}(")
-                    .append(".{")
-                    .append(group.getValue() - group.getKey())
-                    .append("})");
-            i = group.getValue();
-        }
-        template.append(".{").append(input.length() - i).append("}");
-
-        Matcher matcher = Pattern.compile(template.toString()).matcher(input);
-        if (!matcher.matches()) {
-            return null;
-        }
-        return matcher.toMatchResult();
     }
 
 
@@ -147,6 +125,78 @@ public class GroupRule<O> implements Rule<O> {
         } while (itClosings.hasNext());
 
         return groups;
+    }
+
+
+    /* Helpers */
+
+    protected static MatchResult asMatchResult(CharSequence input, List<Pair<Integer, Integer>> groups) {
+        int[] starts = new int[groups.size() + 1];
+        int[] ends = new int[groups.size() + 1];
+
+        starts[0] = 0;
+        ends[0] = input.length();
+
+        int i = 1;
+        for (Pair<Integer, Integer> group : groups) {
+            starts[i] = group.getKey();
+            ends[i] = group.getValue();
+            i++;
+        }
+
+        return new Match(input, starts, ends);
+    }
+
+    @AllArgsConstructor
+    protected static class Match implements MatchResult {
+        private CharSequence input;
+        private int[] starts;
+        private int[] ends;
+
+
+        @Override
+        public int start() {
+            return 0;
+        }
+
+        @Override
+        public int start(int group) {
+            if (group >= starts.length) {
+                return -1;
+            }
+            return starts[group];
+        }
+
+        @Override
+        public int end() {
+            return input.length();
+        }
+
+        @Override
+        public int end(int group) {
+            if (group >= ends.length) {
+                return -1;
+            }
+            return ends[group];
+        }
+
+        @Override
+        public String group() {
+            return input.toString();
+        }
+
+        @Override
+        public String group(int group) {
+            if (group >= starts.length) {
+                throw new IndexOutOfBoundsException("No group " + group);
+            }
+            return input.subSequence(starts[group], ends[group]).toString();
+        }
+
+        @Override
+        public int groupCount() {
+            return starts.length - 1;
+        }
     }
 
 

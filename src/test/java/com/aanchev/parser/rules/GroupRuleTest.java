@@ -32,6 +32,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
@@ -240,4 +241,40 @@ public class GroupRuleTest {
         assertThat(rule.handleMatch(matcher), nullValue());
     }
 
+    @Test
+    public void matchImplementation_sameAsMatcherAsMatchResult() {
+        String input = "abc";
+
+        Matcher matcher = Pattern.compile(".(.).").matcher(input);
+        assumeTrue(matcher.matches());
+
+        MatchResult match = asMatchResult(input, singletonList(new Pair<>(1, 2)));
+
+        assertThat(match.groupCount(), is(matcher.groupCount()));
+
+        assertThat(match.start(), is(matcher.start()));
+        assertThat(match.start(0), is(matcher.start(0)));
+        assertThat(match.start(1), is(matcher.start(1)));
+        assertThat(match.start(2), is(-1));
+
+        assertThat(match.end(), is(matcher.end()));
+        assertThat(match.end(0), is(matcher.end(0)));
+        assertThat(match.end(1), is(matcher.end(1)));
+        assertThat(match.end(2), is(-1));
+
+        assertThat(match.group(), is(matcher.group()));
+        assertThat(match.group(0), is(matcher.group(0)));
+        assertThat(match.group(1), is(matcher.group(1)));
+
+        try {
+            match.group(2);
+            fail("An exception should be throw for non-existent groups.");
+        } catch (IndexOutOfBoundsException e0) {
+            try {
+                assumeTrue(matcher.group(2) == null);
+            } catch (IndexOutOfBoundsException e1) {
+                assertThat(e0.getMessage(), is(e1.getMessage()));
+            }
+        }
+    }
 }
