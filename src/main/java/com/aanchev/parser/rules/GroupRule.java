@@ -16,6 +16,8 @@ package com.aanchev.parser.rules;
 import com.aanchev.parser.ParseException;
 import javafx.util.Pair;
 import lombok.AllArgsConstructor;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -66,6 +68,9 @@ public class GroupRule<O> implements Rule<O> {
             if (groupMatch.groupCount() == 0) {
                 return null;
             }
+            if (groupMatch instanceof GroupRule.Match) {
+                ((GroupRule.Match) groupMatch).original = match;
+            }
             return body.handleMatch(groupMatch);
         } catch (ParseException e) {
             return null;
@@ -78,7 +83,6 @@ public class GroupRule<O> implements Rule<O> {
     public static MatchResult matchTopLevelGroups(CharSequence input, Pattern opening, Pattern closing) {
         return asMatchResult(input, findTopLevelGroups(input, opening, closing));
     }
-
 
     public static List<Pair<Integer, Integer>> findTopLevelGroups(CharSequence input, Pattern opening, Pattern closing) {
         List<Integer> openings = new LinkedList<>();
@@ -131,7 +135,14 @@ public class GroupRule<O> implements Rule<O> {
     }
 
 
-    /* Helpers */
+    /* Custom Match Result implementation */
+
+    public static MatchResult originalMatch(MatchResult groupMatch) {
+        if (groupMatch instanceof GroupRule.Match) {
+            return ((GroupRule.Match) groupMatch).original;
+        }
+        throw new IllegalArgumentException("Given match result is not a custom group-matching result.");
+    }
 
     protected static MatchResult asMatchResult(CharSequence input, List<Pair<Integer, Integer>> groups) {
         int[] starts = new int[groups.size() + 1];
@@ -150,10 +161,15 @@ public class GroupRule<O> implements Rule<O> {
         return new Match(input, starts, ends);
     }
 
-    @AllArgsConstructor
+    @RequiredArgsConstructor
     protected static class Match implements MatchResult {
+        protected MatchResult original = null;
+
+        @NonNull
         private CharSequence input;
+        @NonNull
         private int[] starts;
+        @NonNull
         private int[] ends;
 
 
