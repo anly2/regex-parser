@@ -13,63 +13,43 @@
 
 package com.aanchev.parser.rules;
 
+import com.aanchev.parser.ParseException;
 import javafx.util.Pair;
 import org.junit.Test;
 
+import java.util.LinkedList;
 import java.util.List;
+import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.aanchev.parser.rules.GroupRule.findTopLevelGroups;
-import static com.aanchev.parser.rules.GroupRule.groupMatchingRule;
+import static com.aanchev.parser.rules.EarlyRule.early;
+import static com.aanchev.parser.rules.GroupRule.*;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.core.Is.is;
+import static org.junit.Assume.assumeTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.*;
 
 public class GroupRuleTest {
 
-    @Test
-    public void groupRule_matches_singleGroup() {
-    }
-
-    @Test
-    public void groupRule_matches_multipleGroups() {
-    }
-
-    @Test
-    public void groupRule_matches_onlyTopLevelGroups() {
-        String input = "a + (b - (c + d) - e) - (f + (g - h) + i) + j";
-
-        boolean[] called = {false};
-        Rule<?> rule = groupMatchingRule("\\(", "\\)", (match, children) -> {
-            for (int g = 1; g <= match.groupCount(); g++) {
-                System.out.println(g + ": " + match.group(g));
-            }
-            called[0] = true;
-            return null;
-        });
-
-        Matcher matcher = rule.pattern().matcher(input);
-        if (matcher.matches()) {
-            rule.handle(matcher.toMatchResult(), emptyList());
-        }
-
-        assertThat(called[0], is(true));
-
-    }
-
-    @Test
-    public void groupRule_doesNotMatch_noGroups() {
-    }
-
-    @Test
-    public void groupRule_doesNotMatch_unbalancedGroups() {
-    }
-
-
     // test just the grouping functionality //
+
+    @Test
+    public void findTopLevelGroups_returnsEmpty_whenNoGroupsFound() {
+        String input = "ul > li";
+        Pattern opening = Pattern.compile("\\[");
+        Pattern closing = Pattern.compile("]");
+
+        List<Pair<Integer, Integer>> groups = findTopLevelGroups(input, opening, closing);
+
+        assertThat(groups, is(empty()));
+    }
 
     @Test
     public void findTopLevelGroups_findsSingleWholeGroup() {
@@ -96,7 +76,6 @@ public class GroupRuleTest {
                 new Pair<>(12, 26)
         )));
     }
-
 
     @Test
     public void findTopLevelGroups_findsMultipleTopLevelGroups() {
@@ -140,4 +119,119 @@ public class GroupRuleTest {
                 new Pair<>(25, 40)
         )));
     }
+
+    @Test(expected = ParseException.class)
+    public void findTopLevelGroups_throws_withUnbalancedExpression() {
+        String input = "if (a > ((Map<String, Integer>) b.get(\"b\")))";
+        Pattern opening = Pattern.compile("<");
+        Pattern closing = Pattern.compile(">");
+
+        findTopLevelGroups(input, opening, closing);
+    }
+
+
+    // test the rule contract //
+
+    @Test
+    public void groupRule_delegatesToDecorated() {
+        @SuppressWarnings("unchecked")
+        Rule<Object> body = mock(Rule.class);
+        Rule<Object> groupRule = groupMatching(body, "\\(", "\\)");
+
+        when(body.shouldIgnoreGroup(0)).thenReturn(false);
+        when(body.shouldIgnoreGroup(1)).thenReturn(true);
+        assertThat(groupRule.shouldIgnoreGroup(0), is(false));
+        assertThat(groupRule.shouldIgnoreGroup(1), is(true));
+
+        Matcher matcher = Pattern.compile(".*+").matcher("");
+        assumeTrue(matcher.matches());
+        List<Object> children = emptyList();
+
+        groupRule.pattern();
+        groupRule.handleMatch(matcher);
+        groupRule.handle(matcher, children);
+
+        verify(body).pattern();
+        verify(body).handleMatch(any());
+        verify(body).handle(any(), any());
+    }
+
+    @Test
+    public void groupRule_matches_onlyTopLevelGroups() {
+        String input = "a + (b - (c + d) - e) - (f + (g - h) + i) + j";
+
+        List<Pair<Integer, Integer>> expectedGroups = asList(
+                new Pair<>(5, 20),
+                new Pair<>(25, 40)
+        );
+
+        boolean[] called = {false};
+        Rule<?> rule = groupMatchingRule("\\(", "\\)", (match, children) -> {
+            List<Pair<Integer, Integer>> matchedGroups = new LinkedList<>();
+            for (int g = 1; g <= match.groupCount(); g++) {
+                matchedGroups.add(new Pair<>(match.start(g), match.end(g)));
+            }
+            assertThat(matchedGroups, is(expectedGroups));
+
+            called[0] = true;
+            return null;
+        });
+
+        Matcher matcher = rule.pattern().matcher(input);
+        assumeTrue(matcher.matches());
+
+        MatchResult match = rule.handleMatch(matcher.toMatchResult());
+        rule.handle(match, emptyList());
+
+        assertThat(called[0], is(true));
+    }
+
+    @Test
+    public void groupRule_passesMatchedGroups_toEarlyMatchHandler() {
+        String input = "a + (b - (c + d) - e) - (f + (g - h) + i) + j";
+
+        List<Pair<Integer, Integer>> expectedGroups = asList(
+                new Pair<>(5, 20),
+                new Pair<>(25, 40)
+        );
+
+        boolean[] called = {false};
+        Rule<String> rule = groupMatching("\\(", "\\)",
+                early(
+                        RegexRule.rule(".*+", (m, c) -> "EARLY"),
+                        match -> {
+                            List<Pair<Integer, Integer>> matchedGroups = new LinkedList<>();
+                            for (int g = 1; g <= match.groupCount(); g++) {
+                                matchedGroups.add(new Pair<>(match.start(g), match.end(g)));
+                            }
+                            assertThat(matchedGroups, is(expectedGroups));
+
+                            called[0] = true;
+                            return match;
+                        }
+                )
+        );
+
+        Matcher matcher = rule.pattern().matcher(input);
+        assumeTrue(matcher.matches());
+
+        MatchResult match = rule.handleMatch(matcher.toMatchResult());
+        String result = rule.handle(match, emptyList());
+
+        assertThat(result, is("EARLY"));
+        assertThat(called[0], is(true));
+    }
+
+    @Test
+    public void groupRule_doesNotMatch_unbalancedGroups() {
+        String input = "if (a > ((Map<String, Integer>) b.get(\"b\")))";
+
+        Rule<String> rule = groupMatching("<", ">",
+                RegexRule.rule(".*+", (m, c) -> ""));
+
+        Matcher matcher = Pattern.compile(".*+").matcher(input);
+        assumeTrue(matcher.matches());
+        assertThat(rule.handleMatch(matcher), nullValue());
+    }
+
 }

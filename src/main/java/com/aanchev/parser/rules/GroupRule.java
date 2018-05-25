@@ -13,6 +13,7 @@
 
 package com.aanchev.parser.rules;
 
+import com.aanchev.parser.ParseException;
 import javafx.util.Pair;
 import lombok.AllArgsConstructor;
 
@@ -42,11 +43,12 @@ public class GroupRule<O> implements Rule<O> {
 
     @Override
     public MatchResult handleMatch(MatchResult match) {
-        MatchResult groupMatch = matchTopLevelGroups(match.group(), opening, closing);
-        if (groupMatch.groupCount() == 0) {
+        try {
+            MatchResult groupMatch = matchTopLevelGroups(match.group(), opening, closing);
+            return body.handleMatch(groupMatch);
+        } catch (ParseException e) {
             return null;
         }
-        return body.handleMatch(groupMatch);
     }
 
 
@@ -111,6 +113,10 @@ public class GroupRule<O> implements Rule<O> {
             closings.add(closingMatcher.start());
         }
 
+        if (openings.size() != closings.size()) {
+            throw new ParseException("Unbalanced expression!");
+        }
+
         return getTopLevelGroups(openings, closings);
     }
 
@@ -147,12 +153,22 @@ public class GroupRule<O> implements Rule<O> {
     /* Static constructors */
 
     public static <O> Rule<O> groupMatching(Rule<O> body, String openingRegex, String closingRegex) {
-        return groupMatching(body, Pattern.compile(openingRegex), Pattern.compile(closingRegex));
+        return groupMatching(openingRegex, closingRegex, body);
     }
 
     public static <O> Rule<O> groupMatching(Rule<O> body, Pattern opening, Pattern closing) {
+        return groupMatching(opening, closing, body);
+    }
+
+
+    public static <O> Rule<O> groupMatching(String openingRegex, String closingRegex, Rule<O> body) {
+        return groupMatching(body, Pattern.compile(openingRegex), Pattern.compile(closingRegex));
+    }
+
+    public static <O> Rule<O> groupMatching(Pattern opening, Pattern closing, Rule<O> body) {
         return new GroupRule<>(body, opening, closing);
     }
+
 
     public static <O> Rule<O> groupMatchingRule(String openingRegex, String closingRegex, BiFunction<MatchResult, List<O>, O> handler) {
         return groupMatchingRule(Pattern.compile(openingRegex), Pattern.compile(closingRegex), handler);
