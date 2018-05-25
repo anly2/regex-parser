@@ -150,7 +150,7 @@ public class GroupRuleTest {
         assertThat(groupRule.shouldIgnoreGroup(0), is(false));
         assertThat(groupRule.shouldIgnoreGroup(1), is(true));
 
-        Matcher matcher = Pattern.compile(".*+").matcher("");
+        Matcher matcher = Pattern.compile(".*+").matcher("if(true)");
         assumeTrue(matcher.matches());
         List<Object> children = emptyList();
 
@@ -227,6 +227,17 @@ public class GroupRuleTest {
 
         assertThat(result, is("EARLY"));
         assertThat(called[0], is(true));
+    }
+
+    @Test
+    public void groupRule_doesNotMatch_whenNoGroupsFound() {
+        String input = "int a = 1";
+
+        Rule<String> rule = groupMatchingRule("<", ">", (m, c) -> "should not happen");
+
+        Matcher matcher = Pattern.compile(".*+").matcher(input);
+        assumeTrue(matcher.matches());
+        assertThat(rule.handleMatch(matcher), nullValue());
     }
 
     @Test

@@ -63,6 +63,9 @@ public class GroupRule<O> implements Rule<O> {
     public MatchResult handleMatch(MatchResult match) {
         try {
             MatchResult groupMatch = matchTopLevelGroups(match.group(), opening, closing);
+            if (groupMatch.groupCount() == 0) {
+                return null;
+            }
             return body.handleMatch(groupMatch);
         } catch (ParseException e) {
             return null;
