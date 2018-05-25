@@ -7,11 +7,12 @@ to allow for easy definitions of grammars.
 
 ## Example usage
 
+A very simple example:
 ```java
 Parser parser = new RegexDownstrippingParser<String>(asList(
-        rule("\\d+", (matcher, children) -> "int " + matcher.group()),
-        rule("\\+(.*)", (matcher, children) -> "positive " + children.get(0)),
-        rule("\\-(.*)", (matcher, children) -> "negative " + children.get(0))
+        rule("\\d+", (match, children) -> "int " + match.group()),
+        rule("\\+(.*)", (match, children) -> "positive " + children.get(0)),
+        rule("\\-(.*)", (match, children) -> "negative " + children.get(0))
 ));
 
 assertThat(parser.parse("123"), is("int 123"));
