@@ -129,6 +129,12 @@ public class GroupRuleTest {
         findTopLevelGroups(input, opening, closing);
     }
 
+    @Test
+    public void getTopLevelGroups_worksWithEmptyNestedGroups() {
+        List<Pair<Integer, Integer>> topLevelGroups = getTopLevelGroups(asList(2, 2), asList(2, 2));
+        assertThat(topLevelGroups, is(singletonList(new Pair<>(2, 2))));
+    }
+
 
     // test the rule contract //
 
