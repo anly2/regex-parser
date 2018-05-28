@@ -63,6 +63,11 @@ public class GroupRule<O> implements Rule<O> {
 
     @Override
     public MatchResult handleMatch(MatchResult match) {
+        if (match instanceof GroupRule.Match) {
+            // A group rule handled the match already, so break an infinite recursion.
+            //indicate this rule should not match
+            return null;
+        }
         try {
             MatchResult groupMatch = matchTopLevelGroups(match.group(), opening, closing);
             if (groupMatch.groupCount() == 0) {
