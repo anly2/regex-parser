@@ -85,17 +85,21 @@ public class GroupRule<O> implements Rule<O> {
     }
 
     public static List<Pair<Integer, Integer>> findTopLevelGroups(CharSequence input, Pattern opening, Pattern closing) {
+        return findTopLevelGroups(input, opening, closing, true);
+    }
+
+    public static List<Pair<Integer, Integer>> findTopLevelGroups(CharSequence input, Pattern opening, Pattern closing, boolean includeBoundaries) {
         List<Integer> openings = new LinkedList<>();
         List<Integer> closings = new LinkedList<>();
 
         Matcher openingMatcher = opening.matcher(input);
         while (openingMatcher.find()) {
-            openings.add(openingMatcher.end());
+            openings.add(includeBoundaries ? openingMatcher.start() : openingMatcher.end());
         }
 
         Matcher closingMatcher = closing.matcher(input);
         while (closingMatcher.find()) {
-            closings.add(closingMatcher.start());
+            closings.add(includeBoundaries ? closingMatcher.end() : closingMatcher.start());
         }
 
         if (openings.size() != closings.size()) {
@@ -123,7 +127,7 @@ public class GroupRule<O> implements Rule<O> {
             final int groupStart = o;
             final int threshold = c;
 
-            while (itOpenings.hasNext() && (o = itOpenings.next()) <= threshold) {
+            while (itOpenings.hasNext() && (o = itOpenings.next()) < threshold) {
                 c = itClosings.next();
             }
 
@@ -131,7 +135,27 @@ public class GroupRule<O> implements Rule<O> {
             groups.add(new Pair<>(groupStart, groupEnd));
         } while (itClosings.hasNext());
 
+        coalesceOverlappingGroups(groups);
+
         return groups;
+    }
+
+    private static void coalesceOverlappingGroups(List<Pair<Integer, Integer>> groups) {
+        if (groups.size() < 2) {
+            return;
+        }
+
+        Iterator<Pair<Integer, Integer>> itGroups = groups.iterator();
+
+        Pair<Integer, Integer> previousGroup = itGroups.next();
+        while (itGroups.hasNext()) {
+            Pair<Integer, Integer> nextGroup = itGroups.next();
+            if (nextGroup.equals(previousGroup)) {
+                itGroups.remove();
+            } else {
+                previousGroup = nextGroup;
+            }
+        }
     }
 
 

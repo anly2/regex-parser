@@ -61,7 +61,7 @@ public class GroupRuleTest {
         List<Pair<Integer, Integer>> groups = findTopLevelGroups(input, opening, closing);
 
         assertThat(groups, is(singletonList(
-                new Pair<>(1, 5)
+                new Pair<>(0, 6)
         )));
     }
 
@@ -74,7 +74,7 @@ public class GroupRuleTest {
         List<Pair<Integer, Integer>> groups = findTopLevelGroups(input, opening, closing);
 
         assertThat(groups, is(singletonList(
-                new Pair<>(12, 26)
+                new Pair<>(11, 27)
         )));
     }
 
@@ -87,8 +87,8 @@ public class GroupRuleTest {
         List<Pair<Integer, Integer>> groups = findTopLevelGroups(input, opening, closing);
 
         assertThat(groups, is(asList(
-                new Pair<>(2, 6),
-                new Pair<>(8, 14)
+                new Pair<>(1, 7),
+                new Pair<>(7, 15)
         )));
     }
 
@@ -101,9 +101,9 @@ public class GroupRuleTest {
         List<Pair<Integer, Integer>> groups = findTopLevelGroups(input, opening, closing);
 
         assertThat(groups, is(asList(
-                new Pair<>(9, 14),
-                new Pair<>(23, 28),
-                new Pair<>(40, 48)
+                new Pair<>(6, 18),
+                new Pair<>(19, 33),
+                new Pair<>(34, 55)
         )));
     }
 
@@ -116,8 +116,8 @@ public class GroupRuleTest {
         List<Pair<Integer, Integer>> groups = findTopLevelGroups(input, opening, closing);
 
         assertThat(groups, is(asList(
-                new Pair<>(5, 20),
-                new Pair<>(25, 40)
+                new Pair<>(4, 21),
+                new Pair<>(24, 41)
         )));
     }
 
@@ -128,6 +128,12 @@ public class GroupRuleTest {
         Pattern closing = Pattern.compile(">");
 
         findTopLevelGroups(input, opening, closing);
+    }
+
+    @Test
+    public void getTopLevelGroups_worksWithSemiDetachedGroups() {
+        List<Pair<Integer, Integer>> topLevelGroups = getTopLevelGroups(asList(0, 2), asList(2, 4));
+        assertThat(topLevelGroups, is(asList(new Pair<>(0, 2), new Pair<>(2, 4))));
     }
 
     @Test
@@ -168,8 +174,8 @@ public class GroupRuleTest {
         String input = "a + (b - (c + d) - e) - (f + (g - h) + i) + j";
 
         List<Pair<Integer, Integer>> expectedGroups = asList(
-                new Pair<>(5, 20),
-                new Pair<>(25, 40)
+                new Pair<>(4, 21),
+                new Pair<>(24, 41)
         );
 
         boolean[] called = {false};
@@ -198,8 +204,8 @@ public class GroupRuleTest {
         String input = "a + (b - (c + d) - e) - (f + (g - h) + i) + j";
 
         List<Pair<Integer, Integer>> expectedGroups = asList(
-                new Pair<>(5, 20),
-                new Pair<>(25, 40)
+                new Pair<>(4, 21),
+                new Pair<>(24, 41)
         );
 
         boolean[] called = {false};
@@ -305,7 +311,7 @@ public class GroupRuleTest {
 
         assertThat(original.group(1), is("a"));
         assertThat(original.group(2), is("c"));
-        assertThat(match.group(1), is("b"));
+        assertThat(match.group(1), is("(b)"));
     }
 
     @Test(expected = IllegalArgumentException.class)
