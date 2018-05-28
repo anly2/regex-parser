@@ -252,6 +252,9 @@ public class GroupRuleTest {
         assertThat(rule.handleMatch(matcher), nullValue());
     }
 
+
+    // test custom match implementation
+
     @Test
     public void matchImplementation_sameAsMatcherAsMatchResult() {
         String input = "abc";
@@ -287,5 +290,33 @@ public class GroupRuleTest {
                 assertThat(e0.getMessage(), is(e1.getMessage()));
             }
         }
+    }
+
+    @Test
+    public void originalMatch_accessible() {
+        String input = "a(b)c";
+        Matcher matcher = Pattern.compile("(.)...(.)").matcher(input);
+        Rule<?> rule = groupMatchingRule("\\(", "\\)", (m, c) -> null);
+
+        assumeTrue(matcher.matches());
+
+        MatchResult match = rule.handleMatch(matcher);
+        MatchResult original = originalMatch(match);
+
+        assertThat(original.group(1), is("a"));
+        assertThat(original.group(2), is("c"));
+        assertThat(match.group(1), is("b"));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void originalMatch_throwsForOtherRules() {
+        String input = "a(b)c";
+        Matcher matcher = Pattern.compile("(.)...(.)").matcher(input);
+        Rule<?> rule = RegexRule.rule("..(.)..", (m, c) -> null);
+
+        assumeTrue(matcher.matches());
+
+        MatchResult match = rule.handleMatch(matcher);
+        originalMatch(match);
     }
 }
