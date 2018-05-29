@@ -19,6 +19,7 @@ import lombok.AllArgsConstructor;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -69,7 +70,7 @@ public class GroupRule<O> implements Rule<O> {
             return null;
         }
         try {
-            MatchResult groupMatch = matchTopLevelGroups(match.group(), opening, closing);
+            MatchResult groupMatch = matchGroups(match);
             if (groupMatch.groupCount() == 0) {
                 return null;
             }
@@ -82,12 +83,27 @@ public class GroupRule<O> implements Rule<O> {
         }
     }
 
+    protected MatchResult matchGroups(MatchResult sourceMatch) {
+        CharSequence input = sourceMatch.group();
+        int offset = sourceMatch.start();
+
+        List<Pair<Integer, Integer>> topLevelGroups = findTopLevelGroups(input, opening, closing);
+
+        // add the starting offset to every group index
+        List<Pair<Integer, Integer>> groups = new ArrayList<>(topLevelGroups.size() + 1);
+        groups.add(new Pair<>(sourceMatch.start(0), sourceMatch.end(0)));
+        for (Pair<Integer, Integer> group : topLevelGroups) {
+            groups.add(new Pair<>(
+                    offset + group.getKey(),
+                    offset + group.getValue()
+            ));
+        }
+
+        return asMatchResult(input, groups);
+    }
+
 
     /* Functionality */
-
-    public static MatchResult matchTopLevelGroups(CharSequence input, Pattern opening, Pattern closing) {
-        return asMatchResult(input, findTopLevelGroups(input, opening, closing));
-    }
 
     public static List<Pair<Integer, Integer>> findTopLevelGroups(CharSequence input, Pattern opening, Pattern closing) {
         return findTopLevelGroups(input, opening, closing, true);
@@ -174,13 +190,10 @@ public class GroupRule<O> implements Rule<O> {
     }
 
     protected static MatchResult asMatchResult(CharSequence input, List<Pair<Integer, Integer>> groups) {
-        int[] starts = new int[groups.size() + 1];
-        int[] ends = new int[groups.size() + 1];
+        int[] starts = new int[groups.size()];
+        int[] ends = new int[groups.size()];
 
-        starts[0] = 0;
-        ends[0] = input.length();
-
-        int i = 1;
+        int i = 0;
         for (Pair<Integer, Integer> group : groups) {
             starts[i] = group.getKey();
             ends[i] = group.getValue();
@@ -204,7 +217,7 @@ public class GroupRule<O> implements Rule<O> {
 
         @Override
         public int start() {
-            return 0;
+            return start(0);
         }
 
         @Override
@@ -217,7 +230,7 @@ public class GroupRule<O> implements Rule<O> {
 
         @Override
         public int end() {
-            return input.length();
+            return end(0);
         }
 
         @Override
@@ -230,7 +243,7 @@ public class GroupRule<O> implements Rule<O> {
 
         @Override
         public String group() {
-            return input.toString();
+            return group(0);
         }
 
         @Override
@@ -238,7 +251,8 @@ public class GroupRule<O> implements Rule<O> {
             if (group >= starts.length) {
                 throw new IndexOutOfBoundsException("No group " + group);
             }
-            return input.subSequence(starts[group], ends[group]).toString();
+            int offset = starts[0];
+            return input.subSequence(starts[group] - offset, ends[group] - offset).toString();
         }
 
         @Override

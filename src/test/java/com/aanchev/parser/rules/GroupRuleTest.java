@@ -201,6 +201,27 @@ public class GroupRuleTest {
     }
 
     @Test
+    public void groupRule_preservesMatchStartOffset() {
+        String input = "a[target][href]";
+
+        Rule<String> rule = groupMatchingRule("\\[", "\\]",
+                (match, children) -> "a");
+
+        Matcher matcher = rule.pattern().matcher(input).region(1, 9);
+        assumeTrue(matcher.matches());
+
+        MatchResult groupMatch = ((GroupRule) rule).matchGroups(matcher);
+
+        assertThat(groupMatch.groupCount(), is(1));
+        assertThat(groupMatch.start(), is(1));
+        assertThat(groupMatch.end(), is(9));
+        assertThat(groupMatch.start(1), is(1));
+        assertThat(groupMatch.end(1), is(9));
+        assertThat(groupMatch.group(), is("[target]"));
+        assertThat(groupMatch.group(1), is("[target]"));
+    }
+
+    @Test
     public void groupRule_passesMatchedGroups_toEarlyMatchHandler() {
         String input = "a + (b - (c + d) - e) - (f + (g - h) + i) + j";
 
@@ -276,6 +297,7 @@ public class GroupRuleTest {
         assertThat(match, nullValue());
     }
 
+
     // test custom match implementation
 
     @Test
@@ -285,7 +307,7 @@ public class GroupRuleTest {
         Matcher matcher = Pattern.compile(".(.).").matcher(input);
         assumeTrue(matcher.matches());
 
-        MatchResult match = asMatchResult(input, singletonList(new Pair<>(1, 2)));
+        MatchResult match = asMatchResult(input, asList(new Pair<>(0, 3), new Pair<>(1, 2)));
 
         assertThat(match.groupCount(), is(matcher.groupCount()));
 
