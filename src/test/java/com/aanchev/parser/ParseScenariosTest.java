@@ -15,7 +15,9 @@ package com.aanchev.parser;
 
 import org.junit.Test;
 
+import static com.aanchev.parser.rules.GroupRule.groupMatchingRule;
 import static com.aanchev.parser.rules.RegexRule.rule;
+import static com.aanchev.parser.rules.ShallowRule.shallow;
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
@@ -32,5 +34,30 @@ public class ParseScenariosTest {
         assertThat(parser.parse("123"), is("int 123"));
         assertThat(parser.parse("+456"), is("positive int 456"));
         assertThat(parser.parse("-789"), is("negative int 789"));
+    }
+
+    @Test
+    public void scenario_withGroups() {
+        Parser parser = new RegexDownstrippingParser<String>(asList(
+                rule("(\\w+)(\\[.*\\])",
+                        (match, children) -> "" + children.get(0) + children.get(1)),
+                rule("\\w+",
+                        (match, children) -> String.format("tag '%s'", match.group())),
+                groupMatchingRule("\\[", "\\]",
+                        (match, children) -> String.join(",", children)),
+                shallow(rule("\\[(\\w+)\\]",
+                        (match, children) -> String.format(" with attribute '%s' present", match.group(1)))),
+                shallow(rule("\\[(\\w+)\\*=(['\"])?(.*)\\2\\]",
+                        (match, children) -> String.format(" with attribute '%s' containing '%s'", match.group(1), match.group(3))))
+        ));
+
+        assertThat(parser.parse("a"),
+                is("tag 'a'"));
+        assertThat(parser.parse("a[target]"),
+                is("tag 'a' with attribute 'target' present"));
+        assertThat(parser.parse("a[target][href]"),
+                is("tag 'a' with attribute 'target' present, with attribute 'href' present"));
+        assertThat(parser.parse("a[target][href*='[127.0.0.1]']"),
+                is("tag 'a' with attribute 'target' present, with attribute 'href' containing '[127.0.0.1]'"));
     }
 }
