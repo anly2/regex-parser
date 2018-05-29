@@ -28,7 +28,6 @@ import static com.aanchev.parser.rules.GroupRule.*;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
-import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.nullValue;
@@ -281,17 +280,14 @@ public class GroupRuleTest {
     }
 
     @Test
-    public void groupRule_doesNotMatch_repeatedly() {
-        String input = "{1, 2}, {3, 4}";
+    public void groupRule_doesNotMatch_whenUnnecessary() {
+        String input = "{1, 2}";
 
         Rule<String> rule = groupMatchingRule("\\{", "\\}", (m, c) -> "should happen once");
 
         Matcher matcher = Pattern.compile(".*+").matcher(input);
         assumeTrue(matcher.matches());
         MatchResult match = matcher.toMatchResult();
-
-        match = rule.handleMatch(match);
-        assertThat(match, notNullValue());
 
         match = rule.handleMatch(match);
         assertThat(match, nullValue());

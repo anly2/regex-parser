@@ -64,16 +64,18 @@ public class GroupRule<O> implements Rule<O> {
 
     @Override
     public MatchResult handleMatch(MatchResult match) {
-        if (match instanceof GroupRule.Match) {
-            // A group rule handled the match already, so break an infinite recursion.
-            //indicate this rule should not match
-            return null;
-        }
         try {
             MatchResult groupMatch = matchGroups(match);
+
             if (groupMatch.groupCount() == 0) {
                 return null;
             }
+            if (groupMatch.groupCount() == 1
+                    && groupMatch.start(0) == groupMatch.start(1)
+                    && groupMatch.end(0) == groupMatch.end(1)) {
+                return null;
+            }
+
             if (groupMatch instanceof GroupRule.Match) {
                 ((GroupRule.Match) groupMatch).original = match;
             }
