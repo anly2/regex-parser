@@ -14,7 +14,6 @@
 package com.aanchev.parser.rules;
 
 import com.aanchev.parser.ParseException;
-import javafx.util.Pair;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -263,6 +262,11 @@ public class GroupRule<O> implements Rule<O> {
         }
     }
 
+    @lombok.Value
+    static class Pair<L, R> {
+        private final L key;
+        private final R value;
+    }
 
     /* Static constructors */
 
@@ -291,4 +295,5 @@ public class GroupRule<O> implements Rule<O> {
     public static <O> Rule<O> groupMatchingRule(Pattern opening, Pattern closing, BiFunction<MatchResult, List<O>, O> handler) {
         return new GroupRule<>(rule(PATTERN_ANYTHING, handler), opening, closing);
     }
+
 }

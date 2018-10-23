@@ -14,7 +14,6 @@
 package com.aanchev.parser.rules;
 
 import com.aanchev.parser.ParseException;
-import javafx.util.Pair;
 import org.junit.Test;
 
 import java.util.LinkedList;
