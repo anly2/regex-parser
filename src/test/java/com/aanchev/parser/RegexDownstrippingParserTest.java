@@ -15,9 +15,7 @@ package com.aanchev.parser;
 
 import org.junit.Test;
 
-import static com.aanchev.parser.rules.EarlyRule.early;
-import static com.aanchev.parser.rules.RegexRule.rule;
-import static com.aanchev.parser.rules.ShallowRule.shallow;
+import static com.aanchev.parser.Rules.rule;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
@@ -31,9 +29,9 @@ public class RegexDownstrippingParserTest {
     @Test
     public void parse_canMap_simple() {
         Parser parser = new RegexDownstrippingParser<String>(asList(
-                rule("\\s*[A]\\s*", children -> "type a"),
-                rule("\\s*[B]\\s*", children -> "type b"),
-                rule("\\s*[C]\\s*", children -> "type c")
+                rule("\\s*[A]\\s*", match -> "type a"),
+                rule("\\s*[B]\\s*", match -> "type b"),
+                rule("\\s*[C]\\s*", match -> "type c")
         ));
 
         assertThat(parser.parse("A"), is("type a"));
@@ -44,9 +42,9 @@ public class RegexDownstrippingParserTest {
     @Test
     public void parse_canMap_dynamic() {
         Parser parser = new RegexDownstrippingParser<String>(asList(
-                rule("\\d+", (matcher, children) -> "int " + matcher.group()),
-                rule("\\+\\d+", (matcher, children) -> "positive " + matcher.group().substring(1)),
-                rule("\\-\\d+", (matcher, children) -> "negative " + matcher.group().substring(1))
+                rule("\\d+", (match, children) -> "int " + match.group()),
+                rule("\\+\\d+", (match, children) -> "positive " + match.group().substring(1)),
+                rule("\\-\\d+", (match, children) -> "negative " + match.group().substring(1))
         ));
 
         assertThat(parser.parse("123"), is("int 123"));
@@ -57,9 +55,9 @@ public class RegexDownstrippingParserTest {
     @Test
     public void parse_canMap_nested() {
         Parser parser = new RegexDownstrippingParser<String>(asList(
-                rule("\\d+", (matcher, children) -> "int " + matcher.group()),
-                rule("\\+(.*)", (matcher, children) -> "positive " + children.get(0)),
-                rule("\\-(.*)", (matcher, children) -> "negative " + children.get(0))
+                rule("\\d+", (match, children) -> "int " + match.group()),
+                rule("\\+(.*)", (match, children) -> "positive " + children.get(0)),
+                rule("\\-(.*)", (match, children) -> "negative " + children.get(0))
         ));
 
         assertThat(parser.parse("123"), is("int 123"));
@@ -76,7 +74,7 @@ public class RegexDownstrippingParserTest {
     @Test(expected = ParseException.class)
     public void parse_throwsOnUnknown_nested() {
         Parser parser = new RegexDownstrippingParser<String>(singletonList(
-                rule("\\s++(.*)", c -> c.get(0))
+                rule("\\s++(.*)", (match, children) -> children.get(0))
         ));
 
         try {
@@ -90,10 +88,10 @@ public class RegexDownstrippingParserTest {
     @Test
     public void parse_allowsNesting() {
         Parser parser = new RegexDownstrippingParser<>(asList(
-                rule("\\s*[A]\\s*", children -> "type a"),
-                rule("\\s*[B]\\s*", children -> "type b"),
-                rule("\\s*[C]\\s*", children -> "type c"),
-                rule("(\\S++)\\s++(\\S++)\\s++(\\S++)", children -> children)
+                rule("\\s*[A]\\s*", (match, children) -> "type a"),
+                rule("\\s*[B]\\s*", (match, children) -> "type b"),
+                rule("\\s*[C]\\s*", (match, children) -> "type c"),
+                rule("(\\S++)\\s++(\\S++)\\s++(\\S++)", (match, children) -> children)
         ));
 
         assertThat(parser.parse("A B C"), is(asList("type a", "type b", "type c")));
@@ -108,8 +106,8 @@ public class RegexDownstrippingParserTest {
         // then expect `(A > ((B < (C < D)) > E))`
         {
             Parser parser = new RegexDownstrippingParser<>(asList(
-                    rule("\\s*(.*?)>(.*)", children -> String.format("(%s > %s)", children.get(0), children.get(1))),
-                    rule("\\s*(.*?)<(.*)", children -> String.format("(%s < %s)", children.get(0), children.get(1))),
+                    rule("\\s*(.*?)>(.*)", (match, children) -> String.format("(%s > %s)", children.get(0), children.get(1))),
+                    rule("\\s*(.*?)<(.*)", (match, children) -> String.format("(%s < %s)", children.get(0), children.get(1))),
                     rule("\\s*[A-Z]\\s*", (matcher, children) -> matcher.group().trim())
             ));
 
@@ -120,8 +118,8 @@ public class RegexDownstrippingParserTest {
         // then expect `((A > B) < (C < (D > E)))`
         {
             Parser parser = new RegexDownstrippingParser<>(asList(
-                    rule("\\s*(.*?)<(.*)", children -> String.format("(%s < %s)", children.get(0), children.get(1))),
-                    rule("\\s*(.*?)>(.*)", children -> String.format("(%s > %s)", children.get(0), children.get(1))),
+                    rule("\\s*(.*?)<(.*)", (match, children) -> String.format("(%s < %s)", children.get(0), children.get(1))),
+                    rule("\\s*(.*?)>(.*)", (match, children) -> String.format("(%s > %s)", children.get(0), children.get(1))),
                     rule("\\s*[A-Z]\\s*", (matcher, children) -> matcher.group().trim())
             ));
 
@@ -138,7 +136,7 @@ public class RegexDownstrippingParserTest {
         // then expect `((A > B) > C)`
         {
             Parser parser = new RegexDownstrippingParser<>(asList(
-                    rule("\\s*(.*)>(.*?)", children -> String.format("(%s > %s)", children.get(0), children.get(1))),
+                    rule("\\s*(.*)>(.*?)", (match, children) -> String.format("(%s > %s)", children.get(0), children.get(1))),
                     rule("\\s*[A-Z]\\s*", (matcher, children) -> matcher.group().trim())
             ));
 
@@ -149,7 +147,7 @@ public class RegexDownstrippingParserTest {
         // then expect `(A > (B > C))`
         {
             Parser parser = new RegexDownstrippingParser<>(asList(
-                    rule("\\s*(.*?)>(.*)", children -> String.format("(%s > %s)", children.get(0), children.get(1))),
+                    rule("\\s*(.*?)>(.*)", (match, children) -> String.format("(%s > %s)", children.get(0), children.get(1))),
                     rule("\\s*[A-Z]\\s*", (matcher, children) -> matcher.group().trim())
             ));
 
@@ -160,7 +158,7 @@ public class RegexDownstrippingParserTest {
     @Test
     public void parse_honorsEarlyHandlerVeto_expressedAsReturnedNull() {
         Parser parser = new RegexDownstrippingParser<>(asList(
-                early(rule(".*", (m, c) -> "should not match"), match -> null),
+                rule(".*", (m, c, p) -> null),
                 rule("[A]", (matcher, children) -> "letter a")
         ));
 
@@ -171,11 +169,8 @@ public class RegexDownstrippingParserTest {
     public void parse_ignoresGroups() {
         Parser parser = new RegexDownstrippingParser<String>(asList(
                 rule("\\d+", (matcher, children) -> "int " + matcher.group()),
-                shallow(rule("\\+(\\d+)", (matcher, children) -> {
-                    assertTrue(children.isEmpty());
-                    return "positive " + matcher.group(1);
-                }))
-        ));
+                rule("\\+(\\d+)", (matcher, children) -> "positive " + matcher.group(1)))
+        );
 
         assertThat(parser.parse("+1"), is("positive 1"));
     }

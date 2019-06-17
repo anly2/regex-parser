@@ -15,9 +15,8 @@ package com.aanchev.parser;
 
 import org.junit.Test;
 
-import static com.aanchev.parser.rules.GroupRule.groupMatchingRule;
-import static com.aanchev.parser.rules.RegexRule.rule;
-import static com.aanchev.parser.rules.ShallowRule.shallow;
+import static com.aanchev.parser.GroupRule.groupRule;
+import static com.aanchev.parser.Rules.rule;
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
@@ -42,13 +41,15 @@ public class ParseScenariosTest {
                 rule("(\\w+)(\\[.*\\])",
                         (match, children) -> "" + children.get(0) + children.get(1)),
                 rule("\\w+",
-                        (match, children) -> String.format("tag '%s'", match.group())),
-                groupMatchingRule("\\[", "\\]",
-                        (match, children) -> String.join(",", children)),
-                shallow(rule("\\[(\\w+)\\]",
-                        (match, children) -> String.format(" with attribute '%s' present", match.group(1)))),
-                shallow(rule("\\[(\\w+)\\*=(['\"])?(.*)\\2\\]",
-                        (match, children) -> String.format(" with attribute '%s' containing '%s'", match.group(1), match.group(3))))
+                        (match, children) ->
+                                String.format("tag '%s'", match.group())),
+                groupRule("\\[", "\\]",
+                        (match, children) ->
+                                String.join(",", children)),
+                rule("\\[(\\w+)\\]",
+                        (match, children) -> String.format(" with attribute '%s' present", match.group(1))),
+                rule("\\[(\\w+)\\*=(['\"])?(.*)\\2\\]",
+                        (match, children) -> String.format(" with attribute '%s' containing '%s'", match.group(1), match.group(3)))
         ));
 
         assertThat(parser.parse("a"),

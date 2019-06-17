@@ -15,5 +15,9 @@ package com.aanchev.parser;
 
 public interface Parser {
     <E> E parse(CharSequence input);
+
+    default <E> E parse(CharSequence input, int start, int end) {
+        return this.parse(input.subSequence(start, end));
+    }
 }
 

@@ -13,14 +13,13 @@
 
 package com.aanchev.parser;
 
-import com.aanchev.parser.rules.Rule;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 
+import static com.aanchev.parser.LazyList.lazyList;
 import static java.util.Collections.unmodifiableList;
 
 @Slf4j
@@ -39,7 +38,7 @@ public class RegexDownstrippingParser<O> implements Parser {
         return (E) parse(input, 0, input.length());
     }
 
-    public O parse(CharSequence input, int start, int end) {
+    public <E> E parse(CharSequence input, int start, int end) {
         for (Rule<O> rule : rules) {
             Matcher matcher = rule.pattern().matcher(input).region(start, end);
 
@@ -48,10 +47,14 @@ public class RegexDownstrippingParser<O> implements Parser {
                 continue;
             }
 
-            MatchResult match = rule.handleMatch(matcher.toMatchResult());
+            MatchResult match = matcher.toMatchResult();
+            O result = rule.handle(match, lazyList(match.groupCount(),
+                    i -> (match.start(i + 1) == -1 || match.end(i + 1) == -1) ? null :
+                            parse(input, match.start(i + 1), match.end(i + 1))), this);
 
-            if (match == null) {
-                //the early match handler indicated this rule should be skipped
+
+            if (result == null) {
+                //the handler indicated this rule should be skipped
                 continue;
             }
 
@@ -59,19 +62,8 @@ public class RegexDownstrippingParser<O> implements Parser {
                 log.trace("Rule {} matched against '{}'", rule, input.subSequence(start, end));
             }
 
-            LinkedList<O> children = new LinkedList<>();
-            for (int g = 1; g <= match.groupCount(); g++) {
-                if (rule.shouldIgnoreGroup(g)) {
-                    continue;
-                }
-
-                int s = match.start(g);
-                int e = match.end(g);
-
-                children.add((s == -1 || e == -1) ? null : parse(input, s, e));
-            }
-
-            return rule.handle(match, children);
+            //noinspection unchecked
+            return (E) result;
         }
 
         throw new ParseException("Unable to parse a section. " +
