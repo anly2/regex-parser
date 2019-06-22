@@ -46,23 +46,23 @@ public class GroupRule<O> implements Rule<O> {
     public O handle(MatchResult match, List<O> nodes, Parser parser) {
         CharSequence input = match.group();
 
-        List<Pair<Integer, Integer>> groups = findTopLevelGroups(input, opening, closing);
-
-        // If no groups found, this rule should not match
-        if (groups.size() == 0) {
-            return null;
-        }
-
-        // If only one group was found, but it was the entire input, this rule should not match
-        if (groups.size() == 1
-                && groups.get(0).getKey() == 0
-                && groups.get(0).getValue() == input.length()
-        ) {
-            return null;
-        }
-
         // Try to parse the groups, but failures should just make this rule not match so other rules can have a go
         try {
+            List<Pair<Integer, Integer>> groups = findTopLevelGroups(input, opening, closing);
+
+            // If no groups found, this rule should not match
+            if (groups.size() == 0) {
+                return null;
+            }
+
+            // If only one group was found, but it was the entire input, this rule should not match
+            if (groups.size() == 1
+                    && groups.get(0).getKey() == 0
+                    && groups.get(0).getValue() == input.length()
+            ) {
+                return null;
+            }
+
             return handler.handle(match, lazyList(groups.size(),
                     i -> parser.parse(input, groups.get(i).getKey(), groups.get(i).getValue())), parser);
         } catch (ParseException e) {

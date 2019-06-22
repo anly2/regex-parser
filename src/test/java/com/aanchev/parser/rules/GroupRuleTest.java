@@ -15,18 +15,19 @@ package com.aanchev.parser.rules;
 
 import com.aanchev.parser.GroupRule.*;
 import com.aanchev.parser.ParseException;
+import com.aanchev.parser.Parser;
 import com.aanchev.parser.Rule;
 import org.junit.Test;
 
-import java.util.LinkedList;
 import java.util.List;
-import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.aanchev.parser.GroupRule.*;
+import static com.aanchev.parser.Parser.parser;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.core.Is.is;
@@ -141,38 +142,27 @@ public class GroupRuleTest {
     // test the rule contract //
 
     @Test
-    //FIXME
     public void groupRule_matches_onlyTopLevelGroups() {
         String input = "a + (b - (c + d) - e) - (f + (g - h) + i) + j";
 
-        List<Pair<Integer, Integer>> expectedGroups = asList(
-                new Pair<>(4, 21),
-                new Pair<>(24, 41)
-        );
-
         boolean[] called = {false};
         Rule<?> rule = groupRule("\\(", "\\)", (match, children) -> {
-            List<Pair<Integer, Integer>> matchedGroups = new LinkedList<>();
-            for (int g = 1; g <= match.groupCount(); g++) {
-                matchedGroups.add(new Pair<>(match.start(g), match.end(g)));
-            }
-            assertThat(matchedGroups, is(expectedGroups));
+            assertThat(children.size(), is(2));
+            assertThat(children.get(0), is("(b - (c + d) - e)"));
+            assertThat(children.get(1), is("(f + (g - h) + i)"));
 
             called[0] = true;
-            return null;
+            return "";
         });
 
-        Matcher matcher = rule.pattern().matcher(input);
-        assumeTrue(matcher.matches());
+        Matcher match = rule.pattern().matcher(input);
+        assumeTrue(match.matches());
 
-        //FIXME
-//        MatchResult match = rule.handleMatch(matcher.toMatchResult());
-//        rule.handle(match, emptyList());
+        Parser parser = parser(s -> s);
+        rule.handle(match, null, parser);
 
         assertThat(called[0], is(true));
     }
-
-    //TODO mutation testing
 
 
     @Test
@@ -181,23 +171,21 @@ public class GroupRuleTest {
 
         Rule<String> rule = groupRule("<", ">", (m, c) -> "should not happen");
 
-        Matcher matcher = Pattern.compile(".*+").matcher(input);
-        assumeTrue(matcher.matches());
-        //FIXME
-//        assertThat(rule.handle(matcher), nullValue());
+        Matcher match = Pattern.compile(".*+").matcher(input);
+        assumeTrue(match.matches());
+
+        assertThat(rule.handle(match, null, null), nullValue());
     }
 
     @Test
     public void groupRule_doesNotMatch_unbalancedGroups() {
         String input = "if (a > ((Map<String, Integer>) b.get(\"b\")))";
 
-//        Rule<String> rule = groupMatching("<", ">",
-//                RegexRule.rule(".*+", (m, c) -> ""));
-//
-//        Matcher matcher = Pattern.compile(".*+").matcher(input);
-//        assumeTrue(matcher.matches());
-//        assertThat(rule.handleMatch(matcher), nullValue());
-        //FIXME
+        Rule<String> rule = groupRule("<", ">", (m, c) -> "");
+
+        Matcher match = Pattern.compile(".*+").matcher(input);
+        assumeTrue(match.matches());
+        assertThat(rule.handle(match, null, null), nullValue());
     }
 
     @Test
@@ -206,13 +194,10 @@ public class GroupRuleTest {
 
         Rule<String> rule = groupRule("\\{", "\\}", (m, c) -> "should happen once");
 
-        Matcher matcher = Pattern.compile(".*+").matcher(input);
-        assumeTrue(matcher.matches());
-        MatchResult match = matcher.toMatchResult();
+        Matcher match = Pattern.compile(".*+").matcher(input);
+        assumeTrue(match.matches());
 
-//        match = rule.handleMatch(match);
-//        assertThat(match, nullValue());
-        //FIXME?
+        assertThat(rule.handle(match, null, null), nullValue());
     }
 
 }
