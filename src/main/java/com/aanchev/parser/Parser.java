@@ -13,11 +13,24 @@
 
 package com.aanchev.parser;
 
+import java.util.function.Function;
+
 public interface Parser {
     <E> E parse(CharSequence input);
 
     default <E> E parse(CharSequence input, int start, int end) {
         return this.parse(input.subSequence(start, end));
+    }
+
+
+    static <R> Parser parser(Function<CharSequence, R> impl) {
+        return new Parser() {
+            @Override
+            @SuppressWarnings("unchecked")
+            public <E> E parse(CharSequence input) {
+                return (E) impl.apply(input);
+            }
+        };
     }
 }
 

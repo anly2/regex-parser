@@ -31,4 +31,8 @@ public class LazyList<E> extends AbstractList<E> {
     public static <E> LazyList<E> lazyList(int size, IntFunction<E> fetch) {
         return new LazyList(new Object[size], fetch);
     }
+
+    public static <E> LazyList<E> empty() {
+        return lazyList(0, null);
+    }
 }
