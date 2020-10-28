@@ -29,10 +29,10 @@ Parser parser = new RegexDownstrippingParser<String>(asList(
                 (match, children) -> String.format("tag '%s'", match.group())),
         groupMatchingRule("\\[", "\\]",
                 (match, children) -> String.join(",", children)),
-        shallow(rule("\\[(\\w+)\\]",
-                (match, children) -> String.format(" with attribute '%s' present", match.group(1)))),
-        shallow(rule("\\[(\\w+)\\*=(['\"])?(.*)\\2\\]",
-                (match, children) -> String.format(" with attribute '%s' containing '%s'", match.group(1), match.group(3))))
+        rule("\\[(\\w+)\\]",
+                (match, children) -> String.format(" with attribute '%s' present", match.group(1))),
+        rule("\\[(\\w+)\\*=(['\"])?(.*)\\2\\]",
+                (match, children) -> String.format(" with attribute '%s' containing '%s'", match.group(1), match.group(3)))
 ));
 
 assertThat(parser.parse("a"),
